@@ -22,7 +22,7 @@ import gc
 import csv
 from pdb import set_trace as stop
 
-# python train.py --cell_type=Cell1 --model_name=attchrome --epochs=120 --lr=0.0001 --data_root=data/ --save_root=Results/
+# python train.py --experiment_name=Cell1 --model_name=attchrome --train_file=train.csv --valid_file=valid.csv --test_file=valid.csv --epochs=120 --save_root=Results/
 
 parser = argparse.ArgumentParser(description='DeepDiff')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
@@ -31,9 +31,11 @@ parser.add_argument('--clip', type=float, default=1,help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=30, help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=16, help='')
 parser.add_argument('--dropout', type=float, default=0.5, help='dropout applied to layers (0 = no dropout) if n_layers LSTM > 1')
-parser.add_argument('--cell_type', type=str, default='E003', help='cell type 1')
+parser.add_argument('--experiment_name', type=str, default='my_exp', help='experiment name')
 parser.add_argument('--save_root', type=str, default='./Results/', help='where to save')
-parser.add_argument('--data_root', type=str, default='./data/', help='data location')
+parser.add_argument('--train_file', help='training set file (optional if `test_saved_model` is True)')
+parser.add_argument('--valid_file', help='validation set file (optional)')
+parser.add_argument('--test_file', help='test set file (optional)')
 parser.add_argument('--gpuid', type=int, default=0, help='CUDA gpu')
 parser.add_argument('--gpu', type=int, default=0, help='CUDA gpu')
 parser.add_argument('--n_hms', type=int, default=5, help='number of histone modifications')
@@ -43,7 +45,7 @@ parser.add_argument('--num_layers', type=int, default=1, help='number of layers'
 parser.add_argument('--unidirectional', action='store_true', help='bidirectional/undirectional LSTM')
 parser.add_argument('--save_attention_maps',action='store_true', help='set to save validation beta attention maps')
 parser.add_argument('--attentionfilename', type=str, default='beta_attention.txt', help='where to save attnetion maps')
-parser.add_argument('--test_on_saved_model',action='store_true', help='only test on saved model')
+parser.add_argument('--test_saved_model',action='store_true', help='only test saved model')
 args = parser.parse_args()
 
 
@@ -53,7 +55,7 @@ torch.manual_seed(1)
 
 
 model_name = ''
-model_name += (args.cell_type)+('_')
+model_name += (args.experiment_name)+('_')
 
 model_name+=args.model_type
 
@@ -62,13 +64,11 @@ model_name+=args.model_type
 args.bidirectional=not args.unidirectional
 
 print('the model name: ',model_name)
-args.data_root+=''
+
 args.save_root+=''
-args.dataset=args.cell_type
-args.data_root = os.path.join(args.data_root)
 print('loading data from:  ',args.data_root)
-args.save_root = os.path.join(args.save_root,args.dataset)
-print('saving results in  from: ',args.save_root)
+args.save_root = os.path.join(args.save_root, args.m)
+print('saving results in: ',args.save_root)
 model_dir = os.path.join(args.save_root,model_name)
 if not os.path.exists(model_dir):
 	os.makedirs(model_dir)
@@ -78,10 +78,6 @@ if not os.path.exists(model_dir):
 attentionmapfile=model_dir+'/'+args.attentionfilename
 print('==>processing data')
 Train,Valid,Test = data.load_data(args)
-
-
-
-
 
 
 print('==>building model')
@@ -171,7 +167,6 @@ def test(ValidData,split_name):
 
 		inputs_1 = Sample['input']
 		batch_diff_targets= Sample['label'].unsqueeze(1).float()
-		
 
 		# batch_predictions,batch_beta,batch_alpha = model(inputs_1.type(dtype))
 		batch_predictions = model(inputs_1.type(dtype))
@@ -196,36 +191,55 @@ best_valid_loss = 10000000000
 best_valid_avgAUPR=-1
 best_valid_avgAUC=-1
 best_test_avgAUC=-1
+best_train_avgAUC = -1
 if(args.test_on_saved_model==False):
 	for epoch in range(0, args.epochs):
 		print('---------------------------------------- Training '+str(epoch+1)+' -----------------------------------')
 		predictions,diff_targets,alpha_train,beta_train,train_loss,_ = train(Train)
 		train_avgAUPR, train_avgAUC = evaluate.compute_metrics(predictions,diff_targets)
 
-		predictions,diff_targets,alpha_valid,beta_valid,valid_loss,gene_ids_valid = test(Valid,"Validation")
-		valid_avgAUPR, valid_avgAUC = evaluate.compute_metrics(predictions,diff_targets)
+		if Valid is not None:
+			predictions,diff_targets,alpha_valid,beta_valid,valid_loss,gene_ids_valid = test(Valid,"Validation")
+			valid_avgAUPR, valid_avgAUC = evaluate.compute_metrics(predictions,diff_targets)
 
-		predictions,diff_targets,alpha_test,beta_test,test_loss,gene_ids_test = test(Test,'Testing')
-		test_avgAUPR, test_avgAUC = evaluate.compute_metrics(predictions,diff_targets)
+		if Test is not None:
+			predictions,diff_targets,alpha_test,beta_test,test_loss,gene_ids_test = test(Test,'Testing')
+			test_avgAUPR, test_avgAUC = evaluate.compute_metrics(predictions,diff_targets)
 
-		if(valid_avgAUC >= best_valid_avgAUC):
+		if Valid is not None:
+			best_metric = best_valid_avgAUC
+			current_metric = valid_avgAUC
+		elif Test is not None:
+			best_metric = best_test_avgAUC
+			current_metric = test_avgAUC
+		else:
+			best_metric = best_train_avgAUC
+			current_metric = train_avgAUC
+
+
+		if current_metric > best_metric:
 				# save best epoch -- models converge early
-			best_valid_avgAUC = valid_avgAUC
-			best_test_avgAUC = test_avgAUC
+			if Valid is not None:
+				best_valid_avgAUC = valid_avgAUC
+			if Test is not None:
+				best_test_avgAUC = test_avgAUC
 			torch.save(model.cpu().state_dict(),model_dir+"/"+model_name+'_avgAUC_model.pt')
 			model.type(dtype)
 
 		print("Epoch:",epoch)
-		print("train avgAUC:",train_avgAUC)
-		print("valid avgAUC:",valid_avgAUC)
-		print("test avgAUC:",test_avgAUC)
-		print("best valid avgAUC:", best_valid_avgAUC)
-		print("best test avgAUC:", best_test_avgAUC)
+		print("approx. train avgAUC:",train_avgAUC)
+		if Valid is not None:
+			print("valid avgAUC:",valid_avgAUC)
+			print("best valid avgAUC:", best_valid_avgAUC)
+		if Test is not None:
+			print("test avgAUC:",test_avgAUC)
+			print("best test avgAUC:", best_test_avgAUC)
 
- 
 	print("\nFinished training")
-	print("Best validation avgAUC:",best_valid_avgAUC)
-	print("Best test avgAUC:",best_test_avgAUC)
+	if Valid is not None:
+		print("Best validation avgAUC:",best_valid_avgAUC)
+	if Test is not None:
+		print("Best test avgAUC:",best_test_avgAUC)
 
 
 
