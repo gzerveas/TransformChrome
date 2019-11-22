@@ -22,7 +22,7 @@ import gc
 import csv
 from pdb import set_trace as stop
 
-# python train.py --experiment_name=Cell1 --model_name=attchrome --train_file=train.csv --valid_file=valid.csv --test_file=valid.csv --epochs=120 --save_root=Results/
+# python train.py --experiment_name=Cell1 --model_type=attchrome --train_file=train.csv --valid_file=valid.csv --test_file=valid.csv --epochs=120 --save_root=Results/
 
 parser = argparse.ArgumentParser(description='DeepDiff')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
@@ -54,10 +54,9 @@ args = parser.parse_args()
 torch.manual_seed(1)
 
 
-model_name = ''
-model_name += (args.experiment_name)+('_')
+model_name = (args.experiment_name)+('_')
 
-model_name+=args.model_type
+model_name += args.model_type
 
 
 
@@ -65,17 +64,15 @@ args.bidirectional=not args.unidirectional
 
 print('the model name: ',model_name)
 
-args.save_root+=''
-print('loading data from:  ',args.data_root)
-args.save_root = os.path.join(args.save_root, args.m)
-print('saving results in: ',args.save_root)
-model_dir = os.path.join(args.save_root,model_name)
+args.save_root = os.path.join(args.save_root, model_name)
+print('saving results in: ', args.save_root)
+model_dir = os.path.join(args.save_root, "checkpoints")
 if not os.path.exists(model_dir):
 	os.makedirs(model_dir)
 
 
 
-attentionmapfile=model_dir+'/'+args.attentionfilename
+attentionmapfile = os.path.join(args.save_root, args.attentionfilename)
 print('==>processing data')
 Train,Valid,Test = data.load_data(args)
 
@@ -95,7 +92,7 @@ else:
 	dtype = torch.FloatTensor
 
 print(model)
-if(args.test_on_saved_model==False):
+if(args.test_saved_model==False):
 	print("==>initializing a new model")
 	for p in model.parameters():
 		p.data.uniform_(-0.1,0.1)
@@ -192,7 +189,7 @@ best_valid_avgAUPR=-1
 best_valid_avgAUC=-1
 best_test_avgAUC=-1
 best_train_avgAUC = -1
-if(args.test_on_saved_model==False):
+if(args.test_saved_model==False):
 	for epoch in range(0, args.epochs):
 		print('---------------------------------------- Training '+str(epoch+1)+' -----------------------------------')
 		predictions,diff_targets,alpha_train,beta_train,train_loss,_ = train(Train)
