@@ -1,3 +1,4 @@
+data/all_cell_data/*
 Results/*
 __pycache__/*
 *.pyc
