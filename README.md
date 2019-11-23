@@ -1,4 +1,6 @@
-# AttentiveChrome
+# TransformChrome
+
+Based on:
 
 Reference Paper: [Attend and Predict: Using Deep Attention Model to Understand Gene Regulation by Selective Attention on Chromatin](https://arxiv.org/abs/1708.00339)
 
