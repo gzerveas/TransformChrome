@@ -74,7 +74,7 @@ model = models.transformer_encoder().cuda()
 optimizer = optim.Adam(model.parameters(), lr = lr)
 
 per_epoch_loss = 0
-for epoch_idx in range(100):
+for epoch_idx in range(2):
 	for idx, batch in enumerate(train_loader):
 		hm_array, expr_label, _ = batch
 		hm_array = hm_array.cuda()
