@@ -74,35 +74,42 @@ model = models.baseline_model().cuda()
 optimizer = optim.Adam(model.parameters(), lr = lr)
 
 per_epoch_loss = 0
-running_loss = 0
-for epoch_idx in range(n_epochs):
-    for idx, batch in enumerate(train_loader):
-        hm_array, expr_label, _ = batch
-        hm_array = hm_array.cuda()
-        expr_label = expr_label.cuda()
-        
-        predictions = model(hm_array)
-        loss = model.loss(predictions, expr_label)
-        loss.backward()
-        torch.nn.utils.clip_grad_norm(model.parameters(), 1)
-        optimizer.step()
-        
-        running_loss += loss.item()
-        if idx % 100 == 0:
-            print(running_loss/100)
-            running_loss = 0
-	
-	per_epoch_loss = per_epoch_loss/len(train_loader)
-	# Validation Testing
-	num_correct = 0
-	val_loss = 0
-	for idx, batch in enumerate(val_dataloader):
+for epoch_idx in range(100):
+	for idx, batch in enumerate(train_loader):
 		hm_array, expr_label, _ = batch
 		hm_array = hm_array.cuda()
 		expr_label = expr_label.cuda()
 		predictions = model(hm_array)
-		predictions = predictions.item() > 0.5
-		actual = expr_label.item() > 0.5
+		loss = model.loss(predictions, expr_label)
+		loss.backward()
+		norm = torch.nn.utils.clip_grad_norm(model.parameters(), 1)
+		optimizer.step()
+		per_epoch_loss += loss.item()
+	
+	per_epoch_loss = per_epoch_loss/len(train_loader)
+	print(f'Epoch #{epoch_idx+1}; Loss:{per_epoch_loss}')
+	per_epoch_loss = 0
+	# Validation Testing
+	num_correct = 0
+	total_number = val_loader.dataset.__len__()
+	val_loss = 0
+	for idx, batch in enumerate(val_loader):
+		hm_array, expr_label, _ = batch
+		hm_array = hm_array.cuda()
+		expr_label = expr_label.cuda()
+		predictions = model(hm_array)
+		loss = model.loss(predictions, expr_label)
+		val_loss += loss.item()
+		
+		model_predictions = torch.sigmoid(predictions).detach().cpu().numpy()
+		model_predictions = model_predictions > 0.5
+		actual_labels = expr_label.detach().cpu().numpy() > 0.5
+		matching_preds = np.logical_and(actual_labels, model_predictions)
+		num_correct += np.count_nonzero(matching_preds)
+	
+	val_loss = val_loss/total_number
+	accuracy = 100*num_correct/total_number
+	print(f'Val Loss: {val_loss}; Accuracy: {accuracy}')
 
 
 
