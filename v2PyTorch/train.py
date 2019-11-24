@@ -94,16 +94,16 @@ for epoch_idx in range(n_epochs):
 	
 	per_epoch_loss = per_epoch_loss/len(train_loader)
 	# Validation Testing
-    num_correct = 0
+	num_correct = 0
 	val_loss = 0
-    for idx, batch in enumerate(val_dataloader):
-        hm_array, expr_label, _ = batch
+	for idx, batch in enumerate(val_dataloader):
+		hm_array, expr_label, _ = batch
 		hm_array = hm_array.cuda()
-        expr_label = expr_label.cuda()
-        predictions = model(hm_array)
+		expr_label = expr_label.cuda()
+		predictions = model(hm_array)
 		predictions = predictions.item() > 0.5
 		actual = expr_label.item() > 0.5
-		
+
 
 
 
