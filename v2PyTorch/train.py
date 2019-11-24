@@ -70,7 +70,7 @@ train_loader, val_loader, test_loader = dataloaders
 
 n_epochs = 2
 lr = 0.0001
-model = models.baseline_model().cuda()
+model = models.transformer_encoder().cuda()
 optimizer = optim.Adam(model.parameters(), lr = lr)
 
 per_epoch_loss = 0
@@ -84,6 +84,7 @@ for epoch_idx in range(100):
 		loss.backward()
 		norm = torch.nn.utils.clip_grad_norm(model.parameters(), 1)
 		optimizer.step()
+		optimizer.zero_grad()
 		per_epoch_loss += loss.item()
 	
 	per_epoch_loss = per_epoch_loss/len(train_loader)

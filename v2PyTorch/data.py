@@ -59,9 +59,9 @@ def load_data(cell_type):
     valid_data = HMData(os.path.join(filepath,'valid.csv'))
     test_data = HMData(os.path.join(filepath,'test.csv'))
     
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=16, shuffle=True, pin_memory=True, drop_last=True)
-    valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=16, shuffle=False, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(test_data, batch_size=16, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=10, shuffle=True, pin_memory=True, drop_last=True)
+    valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=10, shuffle=False, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=10, shuffle=False)
     return train_loader, valid_loader, test_loader
 
 def load_all_data():
