@@ -5,6 +5,17 @@ import torch.nn.functional as F
 import numpy as np
 from pdb import set_trace as stop
 
+class transformer_encoder(nn.Module):
+	def __init__(self):
+		super().__init__()
+		self.encoder = nn.TransformerEncoderLayer(d_model=5, nhead=5, dim_feedforward=256, dropout=0.1)
+		self.output_layer = nn.Linear(500, 1)
+		self.loss = nn.BCEWithLogitsLoss()
+	def forward(self, data_batch):
+		output = self.encoder(data_batch)
+		output = output.view(-1, 500)
+		output = self.output_layer(output)
+		return output
 
 class baseline_model(nn.Module):
     def __init__(self):
