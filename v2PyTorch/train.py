@@ -14,7 +14,7 @@ import sys, os
 import random
 import numpy as np
 from sklearn import metrics
-import models as Model
+import models
 # from SiameseLoss import ContrastiveLoss
 import evaluate
 import data
@@ -78,7 +78,10 @@ Train,Valid,Test = data.load_data(args)
 
 
 print('==>building model')
-model = Model.att_chrome(args)
+if args.model_type == 'transformer':
+	model = models.transformer_encoder()#.cuda()
+else:
+	model = models.att_chrome(args)
 
 
 
@@ -137,7 +140,8 @@ def train(TrainData):
 
 		diff_targets[start:end,0] = batch_diff_targets[:,0]
 		all_gene_ids[start:end]=Sample['geneID']
-		predictions[start:end] = batch_predictions.data.cpu()
+
+		predictions[start:end] = torch.sigmoid(batch_predictions).detach().cpu()
 		
 	per_epoch_loss=per_epoch_loss/num_batches
 	return predictions,diff_targets,all_attention_bin,all_attention_hm,per_epoch_loss,all_gene_ids
