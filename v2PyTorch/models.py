@@ -5,6 +5,26 @@ import torch.nn.functional as F
 import numpy as np
 from pdb import set_trace as stop
 
+
+class baseline_model(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(500, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+			nn.Dropout(0.5),
+            nn.ReLU(),
+            nn.Linear(256, 1),
+        )
+        self.loss = nn.BCEWithLogitsLoss()
+    
+    def forward(self, data_batch):
+        data_batch = data_batch.view(-1, 500)
+        output = self.net(data_batch)
+        return output
+
+
 def batch_product(iput, mat2):
 		result = None
 		for i in range(iput.size()[0]):
@@ -116,7 +136,7 @@ class att_chrome(nn.Module):
 		
 		return torch.sigmoid(prediction_m)
 
-args_dict = {'lr': 0.0001, 'model_name': 'attchrome', 'clip': 1, 'epochs': 2, 'batch_size': 10, 'dropout': 0.5, 'cell_1': 'Cell1', 'save_root': 'Results/Cell1', 'data_root': 'data/', 'gpuid': 0, 'gpu': 0, 'n_hms': 5, 'n_bins': 200, 'bin_rnn_size': 32, 'num_layers': 1, 'unidirectional': False, 'save_attention_maps': False, 'attentionfilename': 'beta_attention.txt', 'test_on_saved_model': False, 'bidirectional': True, 'dataset': 'Cell1'}
-att_chrome_args = AttrDict(args_dict)
-att_chrome_model = att_chrome(att_chrome_args)
+# args_dict = {'lr': 0.0001, 'model_name': 'attchrome', 'clip': 1, 'epochs': 2, 'batch_size': 10, 'dropout': 0.5, 'cell_1': 'Cell1', 'save_root': 'Results/Cell1', 'data_root': 'data/', 'gpuid': 0, 'gpu': 0, 'n_hms': 5, 'n_bins': 200, 'bin_rnn_size': 32, 'num_layers': 1, 'unidirectional': False, 'save_attention_maps': False, 'attentionfilename': 'beta_attention.txt', 'test_on_saved_model': False, 'bidirectional': True, 'dataset': 'Cell1'}
+# att_chrome_args = AttrDict(args_dict)
+# att_chrome_model = att_chrome(att_chrome_args)
 
