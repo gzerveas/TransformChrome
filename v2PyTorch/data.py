@@ -75,7 +75,7 @@ def load_all_data():
         valid_data = HMData(os.path.join(filepath,'valid.csv'))
         test_data = HMData(os.path.join(filepath,'test.csv'))
         train_data_list.append(train_data)
-        val_data_list.append(val_data)
+        val_data_list.append(valid_data)
         test_data_list.append(test_data)
     
     train_data = torch.utils.data.ConcatDataset(train_data_list)
@@ -90,7 +90,7 @@ def loadData(filename,windows):
     with open(filename) as fi:
         csv_reader=csv.reader(fi)
         data=list(csv_reader)
-
+    
         ncols=(len(data[0]))
     fi.close()
     nrows=len(data)
@@ -99,10 +99,10 @@ def loadData(filename,windows):
     print("Number of genes: %d" % ngenes)
     print("Number of entries: %d" % nrows)
     print("Number of HMs: %d" % nfeatures)
-
+    
     count=0
     attr=collections.OrderedDict()
-
+    
     for i in range(0,nrows,windows):
         hm1=torch.zeros(windows,1)
         hm2=torch.zeros(windows,1)
@@ -116,9 +116,9 @@ def loadData(filename,windows):
             hm4[w][0]=int(data[i+w][5])
             hm5[w][0]=int(data[i+w][6])
         geneID=str(data[i][0].split("_")[0])
-
+        
         thresholded_expr = int(data[i+w][7])
-
+        
         attr[count]={
             'geneID':geneID,
             'expr':thresholded_expr,
@@ -129,7 +129,7 @@ def loadData(filename,windows):
             'hm5':hm5
         }
         count+=1
-
+        
     return attr
 
 
@@ -144,21 +144,21 @@ class OLD_HMData(Dataset):
         label=self.c1[i]['expr']
         geneID=self.c1[i]['geneID']
         sample={'geneID':geneID,
-               'input':final_data_c1,
-               'label':label,
-               }
+                'input':final_data_c1,
+                'label':label,
+                }
         return sample
 
 def OLD_load_data(args):
     '''
     Loads data into a 3D tensor for each of the 3 splits.
-
+    
     '''
     print("==>loading train data from: {}".format(args.train_file))
     cell_train_dict1=loadData(args.train_file, args.n_bins)
     train_inputs = OLD_HMData(cell_train_dict1)
     Train = torch.utils.data.DataLoader(train_inputs, batch_size=args.batch_size, shuffle=True)
-
+    
     if args.valid_file is not None:
         print("==>loading valid data from: {}".format(args.valid_file))
         cell_valid_dict1=loadData(args.valid_file,args.n_bins)
@@ -166,7 +166,7 @@ def OLD_load_data(args):
         Valid = torch.utils.data.DataLoader(valid_inputs, batch_size=args.batch_size, shuffle=False)
     else:
         Valid = None
-
+    
     if args.test_file is not None:
         print("==>loading test data from: {}".format(args.test_file))
         cell_test_dict1=loadData(args.test_file, args.n_bins)
@@ -174,7 +174,7 @@ def OLD_load_data(args):
         Test = torch.utils.data.DataLoader(test_inputs, batch_size=args.batch_size, shuffle=False)
     else:
         Test = None
-
+    
     return Train, Valid, Test
 
 

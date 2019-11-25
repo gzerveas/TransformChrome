@@ -5,35 +5,92 @@ import torch.nn.functional as F
 import numpy as np
 from pdb import set_trace as stop
 
+# From https://github.com/pytorch/examples/blob/master/word_language_model/model.py
+class PositionalEncoding(nn.Module):
+    r"""Inject some information about the relative or absolute position of the tokens
+        in the sequence. The positional encodings have the same dimension as
+        the embeddings, so that the two can be summed. Here, we use sine and cosine
+        functions of different frequencies.
+    .. math::
+        \text{PosEncoder}(pos, 2i) = sin(pos/10000^(2i/d_model))
+        \text{PosEncoder}(pos, 2i+1) = cos(pos/10000^(2i/d_model))
+        \text{where pos is the word position and i is the embed idx)
+    Args:
+        d_model: the embed dim (required).
+        dropout: the dropout value (default=0.1).
+        max_len: the max. length of the incoming sequence (default=5000).
+    Examples:
+        >>> pos_encoder = PositionalEncoding(d_model)
+    """
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+		
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+	
+    def forward(self, x):
+        r"""Inputs of forward function
+        Args:
+            x: the sequence fed to the positional encoder model (required).
+        Shape:
+            x: [sequence length, batch size, embed dim]
+            output: [sequence length, batch size, embed dim]
+        Examples:
+            >>> output = pos_encoder(x)
+        """
+		
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+
 class transformer_encoder(nn.Module):
 	def __init__(self):
 		super().__init__()
-		self.encoder = nn.TransformerEncoderLayer(d_model=5, nhead=5, dim_feedforward=256, dropout=0.1)
-		self.output_layer = nn.Linear(500, 1)
+		self.embed = nn.Linear(5, 64)
+		self.pos_enc = PositionalEncoding(64, 0.5, 100)
+		encoder_layers = nn.TransformerEncoderLayer(64, 8, 128, 0.5)
+		self.transformer_encoder = nn.TransformerEncoder(encoder_layers, 1)
+		self.fc = nn.Linear(64, 1)
+		self.output_layer = nn.Linear(100, 1)
 		self.loss = nn.BCEWithLogitsLoss()
 	def forward(self, data_batch):
-		output = self.encoder(data_batch)
-		output = output.view(-1, 500)
+		output = data_batch.permute(1, 0, 2)
+		output = self.embed(output) * math.sqrt(100)
+		output = self.pos_enc(output)
+		output = self.transformer_encoder(output)
+		output = self.fc(output)
+		output = output.permute(1, 0, 2).squeeze(2)
 		output = self.output_layer(output)
 		return output
 
 class baseline_model(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(500, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-			nn.Dropout(0.5),
-            nn.ReLU(),
-            nn.Linear(256, 1),
-        )
-        self.loss = nn.BCEWithLogitsLoss()
-    
-    def forward(self, data_batch):
-        data_batch = data_batch.view(-1, 500)
-        output = self.net(data_batch)
-        return output
+	def __init__(self):
+		super().__init__()
+		self.embed = nn.Linear(5, 64)
+		self.fc = nn.Linear(64, 10)
+		self.output_layer = nn.Linear(100*10, 1)
+		# self.net = nn.Sequential(
+		# 	nn.Linear(100*10, 256),
+		# 	nn.ReLU(),
+		# 	nn.Linear(256, 256),
+		# 	nn.Dropout(0.5),
+		# 	nn.ReLU(),
+		# 	nn.Linear(256, 1),
+		# )
+		self.loss = nn.BCEWithLogitsLoss()
+	
+	def forward(self, data_batch):
+		output = data_batch.permute(1, 0, 2)
+		output = self.embed(output)
+		output = self.fc(output)
+		output = output.permute(1, 0, 2).squeeze(2)
+		output = self.output_layer(output)
+		return output
 
 
 def batch_product(iput, mat2):
@@ -122,6 +179,7 @@ class att_chrome(nn.Module):
 		self.opsize2=self.hm_level_rnn_1.outputlength()
 		self.diffopsize=2*(self.opsize2)
 		self.fdiff1_1=nn.Linear(self.opsize2,1)
+		self.loss = nn.BCELoss()
 
 	def forward(self,iput):
 
