@@ -46,6 +46,7 @@ parser.add_argument('--unidirectional', action='store_true', help='bidirectional
 parser.add_argument('--save_attention_maps',action='store_true', help='set to save validation beta attention maps')
 parser.add_argument('--attentionfilename', type=str, default='beta_attention.txt', help='where to save attnetion maps')
 parser.add_argument('--test_saved_model',action='store_true', help='only test saved model')
+parser.add_argument('--outfile', type=str, default='outfile', help='output file name')
 args = parser.parse_args()
 
 
@@ -58,7 +59,23 @@ model_name = (args.experiment_name)+('_')
 
 model_name += args.model_type
 
+output_csv_file_train = args.save_root + model_name+('_')+args.outfile+('_train')+('.csv')
+counter = 0
+while os.path.exists(output_csv_file_train):
+	counter+=1
+	output_csv_file_train = output_csv_file_train[:-4]+('-')+str(counter)+('.csv')
 
+output_csv_file_val = args.save_root + model_name+('_')+args.outfile+('_val')+('.csv')
+counter = 0
+while os.path.exists(output_csv_file_val):
+	counter+=1
+	output_csv_file_val = output_csv_file_val[:-4]+('-')+str(counter)+('.csv')
+
+output_csv_file_test = args.save_root + model_name+('_')+args.outfile+('_test')+('.csv')
+counter = 0
+while os.path.exists(output_csv_file_test):
+	counter+=1
+	output_csv_file_test = output_csv_file_test[:-4]+('-')+str(counter)+('.csv')
 
 args.bidirectional=not args.unidirectional
 
@@ -119,12 +136,12 @@ def train(TrainData):
 	for idx, Sample in enumerate(TrainData):
 
 		start,end = (idx*args.batch_size), min((idx*args.batch_size)+args.batch_size, TrainData.dataset.__len__())
-	
+
 
 		inputs_1 = Sample['input']
 		batch_diff_targets = Sample['label'].unsqueeze(1).float()
 
-		
+
 		optimizer.zero_grad()
 		batch_predictions= model(inputs_1.type(dtype))
 
@@ -142,7 +159,7 @@ def train(TrainData):
 		all_gene_ids[start:end]=Sample['geneID']
 
 		predictions[start:end] = torch.sigmoid(batch_predictions).detach().cpu()
-		
+
 	per_epoch_loss=per_epoch_loss/num_batches
 	return predictions,diff_targets,all_attention_bin,all_attention_hm,per_epoch_loss,all_gene_ids
 
@@ -198,14 +215,18 @@ if(args.test_saved_model==False):
 		print('---------------------------------------- Training '+str(epoch+1)+' -----------------------------------')
 		predictions,diff_targets,alpha_train,beta_train,train_loss,_ = train(Train)
 		train_avgAUPR, train_avgAUC = evaluate.compute_metrics(predictions,diff_targets)
+		print("Here")
+		evaluate.save_to_csv(str(epoch+1),[train_loss,train_avgAUPR, train_avgAUC],output_csv_file_train)
 
 		if Valid is not None:
 			predictions,diff_targets,alpha_valid,beta_valid,valid_loss,gene_ids_valid = test(Valid,"Validation")
 			valid_avgAUPR, valid_avgAUC = evaluate.compute_metrics(predictions,diff_targets)
+			evaluate.save_to_csv(str(epoch+1),[valid_loss,valid_avgAUPR, valid_avgAUC],output_csv_file_val)
 
 		if Test is not None:
 			predictions,diff_targets,alpha_test,beta_test,test_loss,gene_ids_test = test(Test,'Testing')
 			test_avgAUPR, test_avgAUC = evaluate.compute_metrics(predictions,diff_targets)
+			evaluate.save_to_csv(str(epoch+1),[test_loss,test_avgAUPR, test_avgAUC],output_csv_file_test)
 
 		if Valid is not None:
 			best_metric = best_valid_avgAUC

@@ -1,6 +1,6 @@
 import numpy
 import torch
-import scipy 
+import scipy
 import scipy.sparse as sp
 import logging
 from six.moves import xrange
@@ -10,6 +10,7 @@ import pdb
 from sklearn import metrics
 import torch.nn.functional as F
 from torch.autograd import Variable
+import os.path
 from pdb import set_trace as stop
 
 
@@ -21,9 +22,9 @@ def compute_aupr(all_targets,all_predictions):
             auPR = metrics.auc(recall,precision)#,reorder=True)
             if not math.isnan(auPR):
                 aupr_array.append(numpy.nan_to_num(auPR))
-        except: 
+        except:
             pass
-    
+
     aupr_array = numpy.array(aupr_array)
     mean_aupr = numpy.mean(aupr_array)
     median_aupr = numpy.median(aupr_array)
@@ -35,12 +36,12 @@ def compute_auc(all_targets,all_predictions):
     auc_array = []
 
     for i in range(all_targets.shape[1]):
-        try:  
+        try:
             auROC = metrics.roc_auc_score(all_targets[:,i], all_predictions[:,i])
             auc_array.append(auROC)
         except ValueError:
             pass
-    
+
     auc_array = numpy.array(auc_array)
     mean_auc = numpy.mean(auc_array)
     median_auc = numpy.median(auc_array)
@@ -61,4 +62,24 @@ def compute_metrics(predictions, targets):
 	return mean_aupr,mean_auc
 
 
+def save_to_csv(epoch,metrics, outfile=None):
+	line = ""
+	print("Now Here")
+    # for item in metrics:
+    #     line += str(item)
+    #     line += ","
+	if outfile:
+		with open(outfile, 'a') as f:
+			for item in metrics:
+				line += str(item)
+				line += ','
+			f.write(epoch + ',' + line + '\n')
+			print(epoch + ',' + line + '\n')
+			f.close()
+		# with open(outfile, 'w') as f:
+		# 	for item in metrics:
+		# 		line += str(item)
+		# 		line +=','
+		# 	f.write(epoch + ',' + line + '\n')
 
+		return
