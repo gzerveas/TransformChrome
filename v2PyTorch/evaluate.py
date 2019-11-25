@@ -64,7 +64,6 @@ def compute_metrics(predictions, targets):
 
 def save_to_csv(epoch,metrics, outfile=None):
 	line = ""
-	print("Now Here")
     # for item in metrics:
     #     line += str(item)
     #     line += ","

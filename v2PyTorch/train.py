@@ -215,7 +215,6 @@ if(args.test_saved_model==False):
 		print('---------------------------------------- Training '+str(epoch+1)+' -----------------------------------')
 		predictions,diff_targets,alpha_train,beta_train,train_loss,_ = train(Train)
 		train_avgAUPR, train_avgAUC = evaluate.compute_metrics(predictions,diff_targets)
-		print("Here")
 		evaluate.save_to_csv(str(epoch+1),[train_loss,train_avgAUPR, train_avgAUC],output_csv_file_train)
 
 		if Valid is not None:
