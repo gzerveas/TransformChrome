@@ -45,7 +45,6 @@ parser.add_argument('--attentionfilename', type=str, default='beta_attention.txt
 parser.add_argument('--test_saved_model',action='store_true', help='only test saved model')
 args = parser.parse_args()
 
-
 # torch.manual_seed(1)
 
 model_name = (args.experiment_name)+('_')
@@ -59,22 +58,26 @@ model_dir = os.path.join(args.save_root, "checkpoints")
 if not os.path.exists(model_dir):
 	os.makedirs(model_dir)
 
-# args_dict = {'lr': 0.0001, 'model_name': 'attchrome', 'clip': 1, 'epochs': 2, 'batch_size': 10, 'dropout': 0.5, 'cell_1': 'Cell1', 'save_root': 'Results/Cell1', 
-#'data_root': 'data/', 'gpuid': 0, 'gpu': 0, 'n_hms': 5, 'n_bins': 200, 'bin_rnn_size': 32, 'num_layers': 1, 'unidirectional': False, 'save_attention_maps': False, 
-#'attentionfilename': 'beta_attention.txt', 'test_on_saved_model': False, 'bidirectional': True, 'dataset': 'Cell1'}
-
-
-cell_type = 'E084'
+# cell_type = 'E084'
+# cell_type = 'E003'
+cell_type = 'E116' # GM12878
+# dataloaders = data.load_all_data()
 dataloaders = data.load_data(cell_type)
 train_loader, val_loader, test_loader = dataloaders
 
-n_epochs = 2
+
 lr = 0.0001
-model = models.transformer_encoder().cuda()
+# model = models.transformer_encoder().cuda()
+model = simple_model().cuda()
+# model = models.att_chrome(args).cuda()
+for p in model.parameters():
+	p = p.data.uniform_(-0.1,0.1)
+
 optimizer = optim.Adam(model.parameters(), lr = lr)
 
 per_epoch_loss = 0
 for epoch_idx in range(2):
+	model = model.train()
 	for idx, batch in enumerate(train_loader):
 		hm_array, expr_label, _ = batch
 		hm_array = hm_array.cuda()
@@ -86,14 +89,23 @@ for epoch_idx in range(2):
 		optimizer.step()
 		optimizer.zero_grad()
 		per_epoch_loss += loss.item()
+		if idx % 1000 == 0:
+			preds = predictions.detach().cpu()
+			targets = expr_label.detach().cpu()
+			train_avgAUPR, train_avgAUC = evaluate.compute_metrics(preds, targets)
+			print(f'Batch #{idx}- AUPR: {train_avgAUPR}, AUC: {train_avgAUC}')
 	
-	per_epoch_loss = per_epoch_loss/len(train_loader)
+	per_epoch_loss = per_epoch_loss/len(train_loader.dataset)
 	print(f'Epoch #{epoch_idx+1}; Loss:{per_epoch_loss}')
 	per_epoch_loss = 0
+	
 	# Validation Testing
+	model = model.eval()
 	num_correct = 0
 	total_number = val_loader.dataset.__len__()
 	val_loss = 0
+	all_preds = []
+	all_labels = []
 	for idx, batch in enumerate(val_loader):
 		hm_array, expr_label, _ = batch
 		hm_array = hm_array.cuda()
@@ -102,23 +114,37 @@ for epoch_idx in range(2):
 		loss = model.loss(predictions, expr_label)
 		val_loss += loss.item()
 		
-		model_predictions = torch.sigmoid(predictions).detach().cpu().numpy()
+		# model_predictions = torch.sigmoid(predictions).detach().cpu().numpy()
+		model_predictions = predictions.detach().cpu()
+		all_preds.append(model_predictions)
+		model_predictions = model_predictions.numpy()
+		mean_prediction = model_predictions.mean()
 		model_predictions = model_predictions > 0.5
-		actual_labels = expr_label.detach().cpu().numpy() > 0.5
+		
+		actual_labels = expr_label.detach().cpu()
+		all_labels.append(actual_labels)
+		actual_labels = actual_labels.numpy()
+		actual_labels = actual_labels > 0.5
 		matching_preds = np.logical_and(actual_labels, model_predictions)
 		num_correct += np.count_nonzero(matching_preds)
 	
+	all_preds = torch.cat(all_preds, 0)
+	all_labels = torch.cat(all_labels, 0)
+	valid_avgAUPR, valid_avgAUC = evaluate.compute_metrics(all_preds, all_labels)
+	print(f'Validation- AUPR: {valid_avgAUPR}, AUC: {valid_avgAUC}')
 	val_loss = val_loss/total_number
 	accuracy = 100*num_correct/total_number
 	print(f'Val Loss: {val_loss}; Accuracy: {accuracy}')
 
 
-
+# args_dict = {'lr': 0.0001, 'model_name': 'attchrome', 'clip': 1, 'epochs': 2, 'batch_size': 10, 'dropout': 0.5, 'cell_1': 'Cell1', 'save_root': 'Results/Cell1', 
+#'data_root': 'data/', 'gpuid': 0, 'gpu': 0, 'n_hms': 5, 'n_bins': 200, 'bin_rnn_size': 32, 'num_layers': 1, 'unidirectional': False, 'save_attention_maps': False, 
+#'attentionfilename': 'beta_attention.txt', 'test_on_saved_model': False, 'bidirectional': True, 'dataset': 'Cell1'}
 
 
 # attentionmapfile = os.path.join(args.save_root, args.attentionfilename)
 # print('==>processing data')
-# Train,Valid,Test = data.load_data(args)
+
 
 
 # print('==>building model')

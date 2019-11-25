@@ -72,7 +72,9 @@ class baseline_model(nn.Module):
 	def __init__(self):
 		super().__init__()
 		self.embed = nn.Linear(5, 64)
+		self.dropout1 = nn.Dropout(0.5)
 		self.fc = nn.Linear(64, 10)
+		self.dropout2 = nn.Dropout(0.5)
 		self.output_layer = nn.Linear(100*10, 1)
 		# self.net = nn.Sequential(
 		# 	nn.Linear(100*10, 256),
@@ -87,8 +89,26 @@ class baseline_model(nn.Module):
 	def forward(self, data_batch):
 		output = data_batch.permute(1, 0, 2)
 		output = self.embed(output)
+		output = self.dropout1(output)
 		output = self.fc(output)
-		output = output.permute(1, 0, 2).squeeze(2)
+		output = output.permute(1, 0, 2)
+		output = output.reshape(output.size(0), 10*100)
+		output = self.dropout2(output)
+		output = self.output_layer(output)
+		return output
+
+class simple_model(nn.Module):
+	def __init__(self):
+		super().__init__()
+		self.embed = nn.Linear(5, 64)
+		self.dropout = nn.Dropout(0.5)
+		self.output_layer = nn.Linear(64*100, 1)
+		self.loss = nn.BCEWithLogitsLoss()
+	
+	def forward(self, data_batch):
+		output = self.embed(data_batch)
+		output = self.dropout(output)
+		output = output.reshape(output.size(0), 64*100)
 		output = self.output_layer(output)
 		return output
 
