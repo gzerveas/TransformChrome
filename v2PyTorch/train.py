@@ -63,9 +63,9 @@ while os.path.exists(output_csv_file_train):
 
 output_csv_file_valid = os.path.join(args.save_root, f'{model_name}_{args.cell_type}_valid.csv')
 counter = 0
-while os.path.exists(output_csv_file_val):
+while os.path.exists(output_csv_file_valid):
 	counter+=1
-	output_csv_file_val = output_csv_file_val[:-4]+('-')+str(counter)+('.csv')
+	output_csv_file_valid = output_csv_file_valid[:-4]+('-')+str(counter)+('.csv')
 
 output_csv_file_test = os.path.join(args.save_root, f'{model_name}_{args.cell_type}_test.csv')
 counter = 0
