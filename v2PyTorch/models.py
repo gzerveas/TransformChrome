@@ -51,48 +51,46 @@ class PositionalEncoding(nn.Module):
 
 
 class transformer_encoder(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.embed = nn.Linear(5, 64)
-        self.pos_enc = PositionalEncoding(64, 0.5, 100)
-        encoder_layers = nn.TransformerEncoderLayer(64, 8, 128, 0.5)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, 1)
-        self.fc = nn.Linear(64, 1)
-        self.output_layer = nn.Linear(100, 1)
-        self.loss = nn.BCEWithLogitsLoss()
+	def __init__(self):
+		super().__init__()
+		self.embed = nn.Linear(5, 64)
+		self.pos_enc = PositionalEncoding(64, 0.5, 100)
+		encoder_layers = nn.TransformerEncoderLayer(64, 8, 128, 0.5)
+		self.transformer_encoder = nn.TransformerEncoder(encoder_layers, 1)
+		self.fc = nn.Linear(64, 1)
+		self.output_layer = nn.Linear(100, 1)
+		self.loss = nn.BCEWithLogitsLoss()
 		self.act = nn.ReLU()
-	
-    def forward(self, data_batch):
-        output = data_batch.permute(1, 0, 2)
-        output = self.embed(output) * math.sqrt(100)
-        output = self.pos_enc(output)
-        output = self.transformer_encoder(output)
-        output = self.act(output)
+	def forward(self, data_batch):
+		output = data_batch.permute(1, 0, 2)
+		output = self.embed(output) * math.sqrt(100)
+		output = self.pos_enc(output)
+		output = self.transformer_encoder(output)
+		output = self.act(output)
 		output = self.fc(output)
 		output = self.act(output)
-        output = output.permute(1, 0, 2).squeeze(2)
-        output = self.output_layer(output)
-        return output
+		output = output.permute(1, 0, 2).squeeze(2)
+		output = self.output_layer(output)
+		return output
 
 class baseline_model(nn.Module):
     def __init__(self):
-        super().__init__()
-        self.embed = nn.Linear(5, 64)
-        self.dropout1 = nn.Dropout(0.5)
-        self.fc = nn.Linear(64, 10)
-        self.dropout2 = nn.Dropout(0.5)
-        self.output_layer = nn.Linear(100*10, 1)
-        # self.net = nn.Sequential(
-        # 	nn.Linear(100*10, 256),
-        # 	nn.ReLU(),
-        # 	nn.Linear(256, 256),
-        # 	nn.Dropout(0.5),
-        # 	nn.ReLU(),
-        # 	nn.Linear(256, 1),
-        # )
-        self.loss = nn.BCEWithLogitsLoss()
+		super().__init__()
+		self.embed = nn.Linear(5, 64)
+		self.dropout1 = nn.Dropout(0.5)
+		self.fc = nn.Linear(64, 10)
+		self.dropout2 = nn.Dropout(0.5)
+		self.output_layer = nn.Linear(100*10, 1)
+		# self.net = nn.Sequential(
+		# 	nn.Linear(100*10, 256),
+		# 	nn.ReLU(),
+		# 	nn.Linear(256, 256),
+		# 	nn.Dropout(0.5),
+		# 	nn.ReLU(),
+		# 	nn.Linear(256, 1),
+		# )
+		self.loss = nn.BCEWithLogitsLoss()
 		self.act = nn.ReLU()
-	
     def forward(self, data_batch):
         output = data_batch.permute(1, 0, 2)
         output = self.embed(output)
@@ -113,7 +111,7 @@ class simple_model(nn.Module):
         self.dropout = nn.Dropout(0.5)
         self.output_layer = nn.Linear(64*100, 1)
         self.loss = nn.BCEWithLogitsLoss()
-
+	
     def forward(self, data_batch):
         output = self.embed(data_batch)
         output = self.dropout(output)
