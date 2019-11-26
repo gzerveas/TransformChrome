@@ -45,7 +45,7 @@ parser.add_argument('--cell_type', choices=['all','individual'])
 # parser.add_argument('--test_saved_model',action='store_true', help='only test saved model')
 args = parser.parse_args()
 
-torch.manual_seed(1)
+# torch.manual_seed(1)
 
 model_name = args.model_type
 
