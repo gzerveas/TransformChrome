@@ -53,18 +53,18 @@ class HMData(torch.utils.data.Dataset): # Dataset class for loading data
         return hm_data, expr_label, gene_id
 
 
-def load_data(cell_type):
+def load_data(cell_type, batch_size=16):
     filepath = os.path.join('data/all_cell_data/', cell_type, 'classification')
     train_data = HMData(os.path.join(filepath,'train.csv'))
     valid_data = HMData(os.path.join(filepath,'valid.csv'))
     test_data = HMData(os.path.join(filepath,'test.csv'))
     
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=10, shuffle=True, pin_memory=True, drop_last=True)
-    valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=10, shuffle=False, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(test_data, batch_size=10, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, pin_memory=True, drop_last=True)
+    valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=batch_size, shuffle=False, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False)
     return train_loader, valid_loader, test_loader
 
-def load_all_data():
+def load_all_data(batch_size=16):
     train_data_list = []
     val_data_list = []
     test_data_list = []
@@ -81,9 +81,9 @@ def load_all_data():
     train_data = torch.utils.data.ConcatDataset(train_data_list)
     valid_data = torch.utils.data.ConcatDataset(val_data_list)
     test_data = torch.utils.data.ConcatDataset(test_data_list)
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=16, shuffle=True, pin_memory=True)
-    valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=16, shuffle=False, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(test_data, batch_size=16, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, pin_memory=True)
+    valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=batch_size, shuffle=False, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, shuffle=False)
     return train_loader, valid_loader, test_loader
 
 def loadData(filename,windows):

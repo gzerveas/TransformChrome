@@ -18,7 +18,7 @@ from sklearn import metrics
 import gc
 import csv
 from pdb import set_trace as stop
-
+import sklearn
 
 import models
 import evaluate
@@ -26,79 +26,89 @@ import data
 
 # python train.py --experiment_name=Cell1 --model_type=attchrome --train_file=train.csv --valid_file=valid.csv --test_file=valid.csv --epochs=120 --save_root=Results/
 
-parser = argparse.ArgumentParser(description='DeepDiff')
-parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
-parser.add_argument('--model_type', type=str, default='attchrome', help='DeepDiff variation')
-parser.add_argument('--clip', type=float, default=1,help='gradient clipping')
-parser.add_argument('--epochs', type=int, default=30, help='upper epoch limit')
-parser.add_argument('--batch_size', type=int, default=16, help='')
-parser.add_argument('--dropout', type=float, default=0.5, help='dropout applied to layers (0 = no dropout) if n_layers LSTM > 1')
-parser.add_argument('--experiment_name', type=str, default='my_exp', help='experiment name')
+all_cell_types = os.listdir('data/all_cell_data')
+
+parser = argparse.ArgumentParser(description='TransformChrome')
+# parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
+parser.add_argument('--model_type', choices=['mlp','transformer','atten_chrome'])
+# parser.add_argument('--clip', type=float, default=1,help='gradient clipping')
+# parser.add_argument('--epochs', type=int, default=30, help='upper epoch limit')
+parser.add_argument('--batch_size', type=int, default=16, help='Batch size. 16 default')
+# parser.add_argument('--dropout', type=float, default=0.5, help='dropout applied to layers (0 = no dropout) if n_layers LSTM > 1')
+# parser.add_argument('--experiment_name', type=str, default='my_exp', help='experiment name')
 parser.add_argument('--save_root', type=str, default='./Results/', help='where to save')
-parser.add_argument('--train_file', help='training set file (optional if `test_saved_model` is True)')
-parser.add_argument('--valid_file', help='validation set file (optional)')
-parser.add_argument('--test_file', help='test set file (optional)')
-parser.add_argument('--n_bins', type=int, default=100, help='number of bins')
-parser.add_argument('--num_layers', type=int, default=1, help='number of layers')
-parser.add_argument('--save_attention_maps',action='store_true', help='set to save validation beta attention maps')
-parser.add_argument('--attentionfilename', type=str, default='beta_attention.txt', help='where to save attnetion maps')
-parser.add_argument('--test_saved_model',action='store_true', help='only test saved model')
+parser.add_argument('--cell_type', choices=['all','individual'])
+# parser.add_argument('--n_bins', type=int, default=100, help='number of bins')
+# parser.add_argument('--num_layers', type=int, default=1, help='number of layers')
+# parser.add_argument('--save_attention_maps',action='store_true', help='set to save validation beta attention maps')
+# parser.add_argument('--attentionfilename', type=str, default='beta_attention.txt', help='where to save attnetion maps')
+# parser.add_argument('--test_saved_model',action='store_true', help='only test saved model')
 args = parser.parse_args()
 
 # torch.manual_seed(1)
 
-model_name = (args.experiment_name)+('_')
-model_name += args.model_type
+model_name = args.model_type
 
-print('the model name: ',model_name)
+print('the model name: ', model_name)
 
-args.save_root = os.path.join(args.save_root, model_name)
-print('saving results in: ', args.save_root)
-model_dir = os.path.join(args.save_root, "checkpoints")
-if not os.path.exists(model_dir):
-	os.makedirs(model_dir)
+model_dir = os.path.join(args.save_root, model_name)
+print('saving results in: ', model_dir)
+os.makedirs(model_dir, exist_ok=True)
 
-# cell_type = 'E084'
-# cell_type = 'E003'
-cell_type = 'E116' # GM12878
-# dataloaders = data.load_all_data()
-dataloaders = data.load_data(cell_type)
-train_loader, val_loader, test_loader = dataloaders
+output_csv_file_train = os.path.join(args.save_root, f'{model_name}_{args.cell_type}_train.csv')
+counter = 0
+while os.path.exists(output_csv_file_train):
+	counter+=1
+	output_csv_file_train = output_csv_file_train[:-4]+('-')+str(counter)+('.csv')
 
+output_csv_file_val = os.path.join(args.save_root, f'{model_name}_{args.cell_type}_valid.csv')
+counter = 0
+while os.path.exists(output_csv_file_val):
+	counter+=1
+	output_csv_file_val = output_csv_file_val[:-4]+('-')+str(counter)+('.csv')
 
-lr = 0.0001
-# model = models.transformer_encoder().cuda()
-model = simple_model().cuda()
-# model = models.att_chrome(args).cuda()
-for p in model.parameters():
-	p = p.data.uniform_(-0.1,0.1)
+output_csv_file_test = os.path.join(args.save_root, f'{model_name}_{args.cell_type}_test.csv')
+counter = 0
+while os.path.exists(output_csv_file_test):
+	counter+=1
+	output_csv_file_test = output_csv_file_test[:-4]+('-')+str(counter)+('.csv')
 
-optimizer = optim.Adam(model.parameters(), lr = lr)
-
-per_epoch_loss = 0
-for epoch_idx in range(2):
+def train(model, train_loader, n_epochs=1):
 	model = model.train()
-	for idx, batch in enumerate(train_loader):
-		hm_array, expr_label, _ = batch
-		hm_array = hm_array.cuda()
-		expr_label = expr_label.cuda()
-		predictions = model(hm_array)
-		loss = model.loss(predictions, expr_label)
-		loss.backward()
-		norm = torch.nn.utils.clip_grad_norm(model.parameters(), 1)
-		optimizer.step()
-		optimizer.zero_grad()
-		per_epoch_loss += loss.item()
-		if idx % 1000 == 0:
-			preds = predictions.detach().cpu()
-			targets = expr_label.detach().cpu()
-			train_avgAUPR, train_avgAUC = evaluate.compute_metrics(preds, targets)
-			print(f'Batch #{idx}- AUPR: {train_avgAUPR}, AUC: {train_avgAUC}')
-	
-	per_epoch_loss = per_epoch_loss/len(train_loader.dataset)
-	print(f'Epoch #{epoch_idx+1}; Loss:{per_epoch_loss}')
 	per_epoch_loss = 0
+	for epoch_idx in range(n_epochs):
+		for idx, batch in enumerate(train_loader):
+			hm_array, expr_label, _ = batch
+			hm_array = hm_array.cuda()
+			expr_label = expr_label.cuda()
+			predictions = model(hm_array)
+			loss = model.loss(predictions, expr_label)
+			loss.backward()
+			norm = torch.nn.utils.clip_grad_norm(model.parameters(), 1)
+			optimizer.step()
+			optimizer.zero_grad()
+			per_epoch_loss += loss.item()
+			# if idx % 1000 == 0:
+			# 	preds = predictions.detach().cpu()
+			# 	targets = expr_label.detach().cpu()
+			# 	train_avgAUPR, train_avgAUC = evaluate.compute_metrics(preds, targets)
+			# 	print(f'Batch #{idx}- AUPR: {train_avgAUPR}, AUC: {train_avgAUC}')
+		
+		per_epoch_loss = per_epoch_loss/len(train_loader.dataset)
+		print(f'Epoch #{epoch_idx+1}; Loss:{per_epoch_loss}')
+		per_epoch_loss = 0
 	
+	return model
+
+def get_threshold(fpr, cutoff=0.05):
+	for i,x in enumerate(fpr):
+		if x > cutoff:
+			threshold_idx = i-1
+			break
+	
+	return threshold_idx
+
+def eval_model(model, eval_loader, mode='valid'):
 	# Validation Testing
 	model = model.eval()
 	num_correct = 0
@@ -115,26 +125,122 @@ for epoch_idx in range(2):
 		val_loss += loss.item()
 		
 		# model_predictions = torch.sigmoid(predictions).detach().cpu().numpy()
-		model_predictions = predictions.detach().cpu()
+		model_predictions = predictions.detach().cpu().numpy()
 		all_preds.append(model_predictions)
-		model_predictions = model_predictions.numpy()
-		mean_prediction = model_predictions.mean()
-		model_predictions = model_predictions > 0.5
 		
-		actual_labels = expr_label.detach().cpu()
+		actual_labels = expr_label.detach().cpu().numpy()
 		all_labels.append(actual_labels)
-		actual_labels = actual_labels.numpy()
-		actual_labels = actual_labels > 0.5
-		matching_preds = np.logical_and(actual_labels, model_predictions)
-		num_correct += np.count_nonzero(matching_preds)
 	
-	all_preds = torch.cat(all_preds, 0)
-	all_labels = torch.cat(all_labels, 0)
-	valid_avgAUPR, valid_avgAUC = evaluate.compute_metrics(all_preds, all_labels)
-	print(f'Validation- AUPR: {valid_avgAUPR}, AUC: {valid_avgAUC}')
-	val_loss = val_loss/total_number
-	accuracy = 100*num_correct/total_number
-	print(f'Val Loss: {val_loss}; Accuracy: {accuracy}')
+	all_preds = np.concatenate(all_preds, 0).squeeze(1)
+	all_labels = np.concatenate(all_labels, 0).squeeze(1)
+	all_labels = all_labels.astype(int)
+	
+	precision, recall, thresholds = metrics.precision_recall_curve(all_labels, all_preds, pos_label=1)
+	auPR = sklearn.metrics.auc(recall, precision)
+	auROC = sklearn.metrics.roc_auc_score(all_labels, all_preds)
+	avg_precision = sklearn.metrics.average_precision_score(all_labels, all_preds)
+	
+	# fpr, tpr, thresholds = metrics.roc_curve(all_labels, all_preds, pos_label=1)
+	# threshold_idx = get_threshold(fpr)
+	# threshold = thresholds[threshold_idx]
+	# pred_labels = all_preds > threshold
+	# f1_score = metrics.f1_score(all_labels, pred_labels)
+	# all_metrics = metrics.classification_report(all_labels, pred_labels)
+	
+	# eval_metrics = {'AUROC' : auROC, 'AUPR' : auPR, 'AP': avg_precision}
+	eval_metrics = [auROC, auPR, avg_precision]
+	print(f'{mode}-  AUC: {auROC}, AUPR: {auPR}, AP: {avg_precision}')
+	
+	return eval_metrics
+
+# cell_type = 'E084'
+# cell_type = 'E003'
+# cell_type = 'E116' # GM12878
+# dataloaders = data.load_all_data()
+def get_new_model():
+	if args.model_type == 'atten_chrome':
+		default_args = argparse.Namespace
+		default_args.n_bins = 100
+		default_args.batch_size = 16
+		default_args.n_hms = 5
+		default_args.num_layers = 1
+		default_args.dropout = 0.5
+		default_args.bidirectional = True
+		default_args.bin_rnn_size = 32
+		model = models.att_chrome(default_args)
+	elif args.model_type == 'transformer':
+		model = models.transformer_encoder()
+	elif args.model_type == 'mlp':
+		model = models.baseline_model()
+	else:
+		raise NotImplementedError
+	
+	return model
+
+lr = 0.0001
+
+
+cell_type_metrics = {}
+
+if args.choices == 'all':
+	dataloaders = data.load_all_data(args.batch_size)
+	train_loader, val_loader, test_loader = dataloaders
+	
+	model = get_new_model()
+	model = model.cuda()
+	optimizer = optim.Adam(model.parameters(), lr = lr)
+	model = train(model, train_loader)
+	
+	for cell_type in all_cell_types:
+		dataloaders = data.load_data(cell_type)
+		train_loader, val_loader, test_loader = dataloaders
+		
+		train_metrics = eval_model(model, train_loader, 'train')
+		val_metrics = eval_model(model, val_loader, 'valid')
+		test_metrics = eval_model(model, test_loader, 'test')
+		cell_type_metrics[cell_type] = [val_metrics, test_metrics]
+	
+elif args.choice == 'individual':
+	for cell_type in all_cell_types:
+		dataloaders = data.load_data(cell_type)
+		train_loader, val_loader, test_loader = dataloaders
+		
+		model = get_new_model()
+		model = model.cuda()
+		optimizer = optim.Adam(model.parameters(), lr = lr)
+		model = train(model, train_loader, 3)
+		
+		train_metrics = eval_model(model, train_loader, 'train')
+		val_metrics = eval_model(model, val_loader, 'valid')
+		test_metrics = eval_model(model, test_loader, 'test')
+		cell_type_metrics[cell_type] = [train_metrics, val_metrics, test_metrics]
+		print(f"Finished {cell_type}")
+else:
+	raise NotImplementedError
+
+
+with open(output_csv_file_train, 'w') as f:
+	for cell_type, metric_list in cell_type_metrics.items():
+		metrics = [str(x)[:6] for x in metric_list[0]]
+		line = ','.join([cell_type] + metrics) + '\n'
+		f.write(line)
+	f.close()
+
+with open(output_csv_file_valid, 'w') as f:
+	for cell_type, metric_list in cell_type_metrics.items():
+		metrics = [str(x)[:6] for x in metric_list[0]]
+		line = ','.join([cell_type] + metrics) + '\n'
+		f.write(line)
+	f.close()
+
+with open(output_csv_file_test, 'w') as f:
+	for cell_type, metric_list in cell_type_metrics.items():
+		metrics = [str(x)[:6] for x in metric_list[0]]
+		line = ','.join([cell_type] + metrics) + '\n'
+		f.write(line)
+	f.close()
+
+
 
 
 # args_dict = {'lr': 0.0001, 'model_name': 'attchrome', 'clip': 1, 'epochs': 2, 'batch_size': 10, 'dropout': 0.5, 'cell_1': 'Cell1', 'save_root': 'Results/Cell1', 

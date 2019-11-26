@@ -13,6 +13,27 @@ from torch.autograd import Variable
 from pdb import set_trace as stop
 
 
+def save_to_csv(epoch,metrics, outfile=None):
+	line = ""
+    # for item in metrics:
+    #     line += str(item)
+    #     line += ","
+	if outfile:
+		with open(outfile, 'a') as f:
+			for item in metrics:
+				line += str(item)
+				line += ','
+			f.write(epoch + ',' + line + '\n')
+			print(epoch + ',' + line + '\n')
+			f.close()
+		# with open(outfile, 'w') as f:
+		# 	for item in metrics:
+		# 		line += str(item)
+		# 		line +=','
+		# 	f.write(epoch + ',' + line + '\n')
+        
+		return
+
 def compute_aupr(all_targets,all_predictions):
     aupr_array = []
     for i in range(all_targets.shape[1]):
