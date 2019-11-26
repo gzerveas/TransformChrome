@@ -32,7 +32,7 @@ parser = argparse.ArgumentParser(description='TransformChrome')
 # parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
 parser.add_argument('--model_type', choices=['mlp','transformer','atten_chrome'])
 # parser.add_argument('--clip', type=float, default=1,help='gradient clipping')
-# parser.add_argument('--epochs', type=int, default=30, help='upper epoch limit')
+parser.add_argument('--epochs', type=int, default=30, help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=16, help='Batch size. 16 default')
 # parser.add_argument('--dropout', type=float, default=0.5, help='dropout applied to layers (0 = no dropout) if n_layers LSTM > 1')
 # parser.add_argument('--experiment_name', type=str, default='my_exp', help='experiment name')
@@ -189,7 +189,7 @@ if args.cell_type == 'all':
 	model = get_new_model()
 	model = model.cuda()
 	optimizer = optim.Adam(model.parameters(), lr = lr)
-	model = train(model, train_loader, 5)
+	model = train(model, train_loader, args.epochs)
 	
 	for cell_type in all_cell_types:
 		dataloaders = data.load_data(cell_type)
@@ -208,7 +208,7 @@ elif args.cell_type == 'individual':
 		model = get_new_model()
 		model = model.cuda()
 		optimizer = optim.Adam(model.parameters(), lr = lr)
-		model = train(model, train_loader, 30)
+		model = train(model, train_loader, args.epochs)
 		
 		train_metrics = eval_model(model, train_loader, 'train')
 		val_metrics = eval_model(model, val_loader, 'valid')
