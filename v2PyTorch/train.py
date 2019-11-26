@@ -198,7 +198,7 @@ if args.cell_type == 'all':
 		train_metrics = eval_model(model, train_loader, 'train')
 		val_metrics = eval_model(model, val_loader, 'valid')
 		test_metrics = eval_model(model, test_loader, 'test')
-		cell_type_metrics[cell_type] = [val_metrics, test_metrics]
+		cell_type_metrics[cell_type] = [train_metrics, val_metrics, test_metrics]
 	
 elif args.cell_type == 'individual':
 	for cell_type in all_cell_types:
@@ -221,30 +221,21 @@ else:
 
 with open(output_csv_file_train, 'w') as f:
 	for cell_type, metric_list in cell_type_metrics.items():
-		metrics = [str(x) for x in metric_list[0]]
-		for idx, number in enumerate(metrics):
-			if len(number) > 6:
-				metrics[idx] = number[:6]
+		metrics = [str(x)[:6] for x in metric_list[0]]
 		line = ','.join([cell_type] + metrics) + '\n'
 		f.write(line)
 	f.close()
 
 with open(output_csv_file_valid, 'w') as f:
 	for cell_type, metric_list in cell_type_metrics.items():
-		metrics = [str(x) for x in metric_list[1]]
-		for idx, number in enumerate(metrics):
-			if len(number) > 6:
-				metrics[idx] = number[:6]
+		metrics = [str(x)[:6] for x in metric_list[1]]
 		line = ','.join([cell_type] + metrics) + '\n'
 		f.write(line)
 	f.close()
 
 with open(output_csv_file_test, 'w') as f:
 	for cell_type, metric_list in cell_type_metrics.items():
-		metrics = [str(x) for x in metric_list[2]]
-		for idx, number in enumerate(metrics):
-			if len(number) > 6:
-				metrics[idx] = number[:6]
+		metrics = [str(x)[:6] for x in metric_list[2]]
 		line = ','.join([cell_type] + metrics) + '\n'
 		f.write(line)
 	f.close()
