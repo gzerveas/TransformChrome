@@ -60,13 +60,16 @@ class transformer_encoder(nn.Module):
         self.fc = nn.Linear(64, 1)
         self.output_layer = nn.Linear(100, 1)
         self.loss = nn.BCEWithLogitsLoss()
-
+		self.act = nn.ReLU()
+	
     def forward(self, data_batch):
         output = data_batch.permute(1, 0, 2)
         output = self.embed(output) * math.sqrt(100)
         output = self.pos_enc(output)
         output = self.transformer_encoder(output)
-        output = self.fc(output)
+        output = self.act(output)
+		output = self.fc(output)
+		output = self.act(output)
         output = output.permute(1, 0, 2).squeeze(2)
         output = self.output_layer(output)
         return output
@@ -88,12 +91,15 @@ class baseline_model(nn.Module):
         # 	nn.Linear(256, 1),
         # )
         self.loss = nn.BCEWithLogitsLoss()
-
+		self.act = nn.ReLU()
+	
     def forward(self, data_batch):
         output = data_batch.permute(1, 0, 2)
         output = self.embed(output)
+		output = self.act(output)
         output = self.dropout1(output)
         output = self.fc(output)
+		output = self.act(output)
         output = output.permute(1, 0, 2)
         output = output.reshape(output.size(0), 10*100)
         output = self.dropout2(output)
