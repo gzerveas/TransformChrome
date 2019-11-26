@@ -74,7 +74,7 @@ class transformer_encoder(nn.Module):
 		return output
 
 class baseline_model(nn.Module):
-    def __init__(self):
+	def __init__(self):
 		super().__init__()
 		self.embed = nn.Linear(5, 64)
 		self.dropout1 = nn.Dropout(0.5)
@@ -91,18 +91,18 @@ class baseline_model(nn.Module):
 		# )
 		self.loss = nn.BCEWithLogitsLoss()
 		self.act = nn.ReLU()
-    def forward(self, data_batch):
-        output = data_batch.permute(1, 0, 2)
-        output = self.embed(output)
+	def forward(self, data_batch):
+		output = data_batch.permute(1, 0, 2)
+		output = self.embed(output)
 		output = self.act(output)
-        output = self.dropout1(output)
-        output = self.fc(output)
+		output = self.dropout1(output)
+		output = self.fc(output)
 		output = self.act(output)
-        output = output.permute(1, 0, 2)
-        output = output.reshape(output.size(0), 10*100)
-        output = self.dropout2(output)
-        output = self.output_layer(output)
-        return output
+		output = output.permute(1, 0, 2)
+		output = output.reshape(output.size(0), 10*100)
+		output = self.dropout2(output)
+		output = self.output_layer(output)
+		return output
 
 class simple_model(nn.Module):
     def __init__(self):
