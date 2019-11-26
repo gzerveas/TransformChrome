@@ -182,7 +182,7 @@ lr = 0.0001
 
 cell_type_metrics = {}
 
-if args.choices == 'all':
+if args.cell_type == 'all':
 	dataloaders = data.load_all_data(args.batch_size)
 	train_loader, val_loader, test_loader = dataloaders
 	
@@ -200,7 +200,7 @@ if args.choices == 'all':
 		test_metrics = eval_model(model, test_loader, 'test')
 		cell_type_metrics[cell_type] = [val_metrics, test_metrics]
 	
-elif args.choice == 'individual':
+elif args.cell_type == 'individual':
 	for cell_type in all_cell_types:
 		dataloaders = data.load_data(cell_type)
 		train_loader, val_loader, test_loader = dataloaders
