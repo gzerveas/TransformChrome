@@ -45,7 +45,7 @@ parser.add_argument('--cell_type', choices=['all','individual'])
 # parser.add_argument('--test_saved_model',action='store_true', help='only test saved model')
 args = parser.parse_args()
 
-# torch.manual_seed(1)
+torch.manual_seed(1)
 
 model_name = args.model_type
 
@@ -112,11 +112,11 @@ def eval_model(model, eval_loader, mode='valid'):
 	# Validation Testing
 	model = model.eval()
 	num_correct = 0
-	total_number = val_loader.dataset.__len__()
+	total_number = eval_loader.dataset.__len__()
 	val_loss = 0
 	all_preds = []
 	all_labels = []
-	for idx, batch in enumerate(val_loader):
+	for idx, batch in enumerate(eval_loader):
 		hm_array, expr_label, _ = batch
 		hm_array = hm_array.cuda()
 		expr_label = expr_label.cuda()
@@ -189,7 +189,7 @@ if args.choices == 'all':
 	model = get_new_model()
 	model = model.cuda()
 	optimizer = optim.Adam(model.parameters(), lr = lr)
-	model = train(model, train_loader)
+	model = train(model, train_loader, 5)
 	
 	for cell_type in all_cell_types:
 		dataloaders = data.load_data(cell_type)
@@ -208,7 +208,7 @@ elif args.choice == 'individual':
 		model = get_new_model()
 		model = model.cuda()
 		optimizer = optim.Adam(model.parameters(), lr = lr)
-		model = train(model, train_loader, 3)
+		model = train(model, train_loader, 30)
 		
 		train_metrics = eval_model(model, train_loader, 'train')
 		val_metrics = eval_model(model, val_loader, 'valid')
