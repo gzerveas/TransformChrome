@@ -228,14 +228,14 @@ with open(output_csv_file_train, 'w') as f:
 
 with open(output_csv_file_valid, 'w') as f:
 	for cell_type, metric_list in cell_type_metrics.items():
-		metrics = [str(x)[:6] for x in metric_list[0]]
+		metrics = [str(x)[:6] for x in metric_list[1]]
 		line = ','.join([cell_type] + metrics) + '\n'
 		f.write(line)
 	f.close()
 
 with open(output_csv_file_test, 'w') as f:
 	for cell_type, metric_list in cell_type_metrics.items():
-		metrics = [str(x)[:6] for x in metric_list[0]]
+		metrics = [str(x)[:6] for x in metric_list[2]]
 		line = ','.join([cell_type] + metrics) + '\n'
 		f.write(line)
 	f.close()
