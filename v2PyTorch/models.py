@@ -51,31 +51,31 @@ class PositionalEncoding(nn.Module):
 
 
 class transformer_encoder(nn.Module):
-	def __init__(self):
-		super().__init__()
-		self.embed = nn.Linear(5, 64)
-		self.pos_enc = PositionalEncoding(64, 0.5, 100)
-		encoder_layers = nn.TransformerEncoderLayer(64, 8, 128, 0.5)
-		self.transformer_encoder = nn.TransformerEncoder(encoder_layers, 1)
-		self.fc = nn.Linear(64*100, 100)
-		self.output_layer = nn.Linear(100, 1)
-		self.loss = nn.BCEWithLogitsLoss()
-		self.act = nn.ReLU()
+    def __init__(self):
+        super().__init__()
+        self.embed = nn.Linear(5, 64)
+        self.pos_enc = PositionalEncoding(64, 0.5, 100)
+        encoder_layers = nn.TransformerEncoderLayer(64, 8, 128, 0.5)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, 1)
+        self.fc = nn.Linear(64*100, 100)
+        self.output_layer = nn.Linear(100, 1)
+        self.loss = nn.BCEWithLogitsLoss()
+        self.act = nn.ReLU()
         self.dropout1 = nn.Dropout(0.5)
         self.dropout2 = nn.Dropout(0.5)
-	def forward(self, data_batch):
-		output = data_batch.permute(1, 0, 2)
-		output = self.embed(output) * math.sqrt(100)
-		output = self.pos_enc(output)
-		output = self.transformer_encoder(output)
+    def forward(self, data_batch):
+        output = data_batch.permute(1, 0, 2)
+        output = self.embed(output) * math.sqrt(100)
+        output = self.pos_enc(output)
+        output = self.transformer_encoder(output)
         output = output.permute(1, 0, 2)
         output = output.view(output.size(0), 100*64)
         output = self.dropout1(output)
-		output = self.fc(output)
-		output = self.act(output)
+        output = self.fc(output)
+        output = self.act(output)
         output = self.dropout1(output)
-		output = self.output_layer(output)
-		return output
+        output = self.output_layer(output)
+        return output
 
 class baseline_model(nn.Module):
 	def __init__(self):
