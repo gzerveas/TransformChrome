@@ -69,7 +69,7 @@ class transformer_encoder(nn.Module):
         output = self.pos_enc(output)
         output = self.transformer_encoder(output)
         output = output.permute(1, 0, 2)
-        output = output.view(output.size(0), 100*64)
+        output = output.reshape(output.size(0), 100*64)
         output = self.dropout1(output)
         output = self.fc(output)
         output = self.act(output)
